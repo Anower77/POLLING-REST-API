@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: polling-rest-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn polling.asgi:application -w 4 -k uvicorn.workers.UvicornWorker
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.11.11 
