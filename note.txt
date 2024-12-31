@@ -1,0 +1,15 @@
+For polls api
+======================================
+http://127.0.0.1:8000/polls/api/polls/
+http://127.0.0.1:8000/polls/api/choices/
+http://127.0.0.1:8000/polls/api/votes/
+
+
+
+
+
+For accounts api
+======================================
+http://127.0.0.1:8000/accounts/api/users/
+http://127.0.0.1:8000/accounts/api/users/<id>/
+http://127.0.0.1:8000/accounts/api/users/profile/

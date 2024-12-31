@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title mb-4">{{ poll.text }}</h3>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="{{ message.tags }} mb-3">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Add Chart Container -->
+            <div class="chart-container mb-4" style="height: 300px;">
+                <canvas id="resultsChart"></canvas>
+            </div>
+
+            <div id="poll-results" class="mb-4">
+                {% for choice in poll.choice_set.all %}
+                <div class="choice-result mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="h6 mb-0">{{ choice.choice_text }}</span>
+                        <div class="d-flex align-items-center">
+                            <span class="vote-count badge bg-primary" data-choice-id="{{ choice.id }}">
+                                {{ choice.get_vote_count }}
+                            </span>
+                            <span class="ms-2 percentage-text" data-choice-percentage="{{ choice.id }}">
+                                {% widthratio choice.get_vote_count poll.get_vote_count|default:1 100 %}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             data-choice-progress="{{ choice.id }}"
+                             style="width: {% widthratio choice.get_vote_count poll.get_vote_count|default:1 100 %}%">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="text-center mt-3">
+                    <span class="badge bg-secondary">
+                        Total Votes: <span id="total-votes">{{ poll.get_vote_count }}</span>
+                    </span>
+                </div>
+            </div>
+
+            {% if not request.user.is_authenticated %}
+                <div class="alert alert-warning">
+                    Please <a href="{% url 'accounts:login' %}">login</a> to vote.
+                </div>
+            {% elif request.user == poll.owner %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> You cannot vote on your own poll.
+                </div>
+            {% elif not poll.active %}
+                <div class="alert alert-info">
+                    <i class="fas fa-lock"></i> This poll is closed.
+                </div>
+            {% elif poll.user_can_vote %}
+                <form action="{% url 'polls:vote' poll.id %}" method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="voting-options">
+                        {% for choice in poll.choice_set.all %}
+                        <div class="form-check custom-radio mb-3">
+                            <input class="form-check-input" type="radio" name="choice" 
+                                   id="choice{{ forloop.counter }}" value="{{ choice.id }}" required>
+                            <label class="form-check-label" for="choice{{ forloop.counter }}">
+                                {{ choice.choice_text }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-vote-yea me-2"></i>Submit Vote
+                    </button>
+                </form>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-check-circle"></i> You have already voted on this poll.
+                </div>
+            {% endif %}
+
+            <!-- Share Section -->
+            <div class="mt-4 text-center">
+                <p class="text-muted">Share this poll:</p>
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-outline-primary btn-sm" onclick="copyPollLink()">
+                        <i class="fas fa-link"></i> Copy Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Connection state management
+    const connectionState = {
+        isConnected: false,
+        reconnectAttempts: 0,
+        socket: null,
+        MAX_RECONNECT_ATTEMPTS: 3,
+        RECONNECT_DELAY: 2000
+    };
+
+    function connectWebSocket() {
+        if (connectionState.socket) {
+            connectionState.socket.close();
+        }
+
+        try {
+            const wsScheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            connectionState.socket = new WebSocket(
+                wsScheme + window.location.host + 
+                '/ws/poll/{{ poll.id }}/'
+            );
+
+            connectionState.socket.onopen = function() {
+                console.log('WebSocket connected');
+                connectionState.isConnected = true;
+                connectionState.reconnectAttempts = 0;
+                hideConnectionError();
+            };
+
+            connectionState.socket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data && data.choices) {
+                        updatePollResults(data);
+                        updateChart(data);
+                    }
+                } catch (error) {
+                    console.error('Error processing message:', error);
+                }
+            };
+
+            connectionState.socket.onclose = function(e) {
+                if (connectionState.isConnected) {
+                    console.log('WebSocket closed');
+                    connectionState.isConnected = false;
+                    if (!e.wasClean) {
+                        handleDisconnection();
+                    }
+                }
+            };
+
+            connectionState.socket.onerror = null;  // Remove error handler to prevent duplicate handling
+
+            return connectionState.socket;
+        } catch (error) {
+            console.error('WebSocket connection failed:', error);
+            return null;
+        }
+    }
+
+    function handleDisconnection() {
+        if (connectionState.reconnectAttempts >= connectionState.MAX_RECONNECT_ATTEMPTS) {
+            showFinalErrorMessage();
+            return;
+        }
+
+        connectionState.reconnectAttempts++;
+        console.log(`Attempting to reconnect (${connectionState.reconnectAttempts}/${connectionState.MAX_RECONNECT_ATTEMPTS})`);
+        showReconnectingMessage();
+        
+        // Use exponential backoff for reconnection attempts
+        const delay = Math.min(1000 * Math.pow(2, connectionState.reconnectAttempts - 1), 10000);
+        setTimeout(() => {
+            if (!connectionState.isConnected) {
+                connectWebSocket();
+            }
+        }, delay);
+    }
+
+    function showReconnectingMessage() {
+        removeExistingAlerts();
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'alert alert-warning alert-dismissible fade show connection-alert';
+        messageDiv.innerHTML = `
+            <i class="fas fa-sync fa-spin me-2"></i>
+            Attempting to reconnect... (${connectionState.reconnectAttempts}/${connectionState.MAX_RECONNECT_ATTEMPTS})
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.card-body').prepend(messageDiv);
+    }
+
+    function showFinalErrorMessage() {
+        removeExistingAlerts();
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show connection-alert';
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Connection lost. Please refresh the page manually to reconnect.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.card-body').prepend(errorDiv);
+    }
+
+    function hideConnectionError() {
+        removeExistingAlerts();
+    }
+
+    function removeExistingAlerts() {
+        document.querySelectorAll('.connection-alert').forEach(alert => {
+            alert.remove();
+        });
+    }
+
+    // Initialize connection only when document is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        connectWebSocket();
+    });
+
+    // Clean up on page unload
+    window.addEventListener('unload', function() {
+        if (connectionState.socket && connectionState.isConnected) {
+            connectionState.socket.close();
+        }
+    });
+
+    // Initialize chart data
+    const chartData = {
+        labels: ['Voting Results'],  // Single label for all bars
+        datasets: [
+            {% for choice in poll.choice_set.all %}
+            {
+                label: '{{ choice.choice_text }}',
+                data: [{{ choice.get_vote_count }}],
+                backgroundColor: [
+                    {% if forloop.counter == 1 %}
+                    'rgb(0, 122, 255)'  // Blue
+                    {% elif forloop.counter == 2 %}
+                    'rgb(255, 191, 0)'  // Yellow
+                    {% elif forloop.counter == 3 %}
+                    'rgb(52, 199, 89)'  // Green
+                    {% elif forloop.counter == 4 %}
+                    'rgb(255, 45, 85)'  // Pink
+                    {% elif forloop.counter == 5 %}
+                    'rgb(175, 82, 222)'  // Purple
+                    {% else %}
+                    'rgb(255, 59, 48)'  // Red
+                    {% endif %}
+                ],
+                barThickness: 50,
+            },
+            {% endfor %}
+        ]
+    };
+
+    // Create chart
+    const ctx = document.getElementById('resultsChart').getContext('2d');
+    const resultsChart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#e0e0e0',
+                        padding: 20,
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw} votes`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#e0e0e0',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                y: {
+                    stacked: true,
+                    display: false,  // Hide Y axis
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Update the updateChart function
+    function updateChart(data) {
+        data.choices.forEach((choice, index) => {
+            if (resultsChart.data.datasets[index]) {
+                resultsChart.data.datasets[index].data = [choice.votes];
+            }
+        });
+        resultsChart.update();
+    }
+
+    function updatePollResults(data) {
+        const totalVotes = data.choices.reduce((sum, choice) => sum + choice.votes, 0);
+        document.getElementById('total-votes').textContent = totalVotes;
+
+        data.choices.forEach(choice => {
+            const countElement = document.querySelector(`[data-choice-id="${choice.id}"]`);
+            const progressBar = document.querySelector(`[data-choice-progress="${choice.id}"]`);
+            const percentageText = document.querySelector(`[data-choice-percentage="${choice.id}"]`);
+            
+            if (countElement) {
+                animateValue(countElement, parseInt(countElement.textContent), choice.votes, 500);
+            }
+            
+            if (progressBar) {
+                progressBar.style.transition = 'width 0.5s ease-in-out';
+                progressBar.style.width = `${choice.percentage}%`;
+            }
+
+            if (percentageText) {
+                percentageText.textContent = `${choice.percentage}%`;
+            }
+        });
+    }
+
+    // Animate number changes
+    function animateValue(element, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const current = Math.floor(progress * (end - start) + start);
+            element.textContent = current;
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    // Copy poll link function
+    function copyPollLink() {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Poll link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy link: ', err);
+        });
+    }
+</script>
+
+<style>
+    .progress-bar {
+        transition: width 0.5s ease-in-out;
+    }
+
+    .custom-radio .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .voting-options {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+
+    .choice-result {
+        transition: all 0.3s ease;
+    }
+
+    .badge {
+        transition: all 0.3s ease;
+    }
+
+    .chart-container {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+        height: 400px !important;  /* Increased height for better visibility */
+    }
+
+    .connection-alert {
+        margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .fa-spin {
+        animation: spin 1s linear infinite;
+    }
+</style>
+{% endblock extra_js %}
+{% endblock content %} 

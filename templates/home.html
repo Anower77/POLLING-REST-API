@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 text-center">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="display-4 mb-4">Welcome to Modern Polling</h1>
+                <p class="lead">Create and participate in polls with our modern, easy-to-use platform.</p>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'polls:list' %}" class="btn btn-primary btn-lg mt-3">View Polls</a>
+                {% else %}
+                    <div class="d-grid gap-2 d-md-block">
+                        <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg mt-3 mx-2">Login</a>
+                        <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg mt-3 mx-2">Register</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Section -->
+<div class="row mt-5 mb-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="circle-progress">
+                    <svg width="150" height="150" viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"/>
+                        <circle class="progress" cx="50" cy="50" r="45" stroke-dasharray="{{ total_polls_percentage }} 100"/>
+                    </svg>
+                    <div class="circle-progress-fill">
+                        <span class="progress-value">{{ total_polls }}</span>
+                        <span class="progress-label">Total Polls</span>
+                    </div>
+                </div>
+                <h3 class="mt-3">Polls Created</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="circle-progress">
+                    <svg width="150" height="150" viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"/>
+                        <circle class="progress" cx="50" cy="50" r="45" stroke-dasharray="{{ total_votes_percentage }} 100"/>
+                    </svg>
+                    <div class="circle-progress-fill">
+                        <span class="progress-value">{{ total_votes }}</span>
+                        <span class="progress-label">Total Votes</span>
+                    </div>
+                </div>
+                <h3 class="mt-3">Votes Cast</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="circle-progress">
+                    <svg width="150" height="150" viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"/>
+                        <circle class="progress" cx="50" cy="50" r="45" stroke-dasharray="{{ completed_polls_percentage }} 100"/>
+                    </svg>
+                    <div class="circle-progress-fill">
+                        <span class="progress-value">{{ total_completed_polls }}</span>
+                        <span class="progress-label">Completed</span>
+                    </div>
+                </div>
+                <h3 class="mt-3">Results Available</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

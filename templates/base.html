@@ -1,0 +1,607 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Polling App{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Update the root variables for dark theme */
+        :root {
+            --primary-color: #1a1a1a;
+            --primary-dark: #141414;
+            --primary-light: #2a2a2a;
+            --text-light: #e0e0e0;
+            --text-muted: #888888;
+            --bg-transparent: rgba(26, 26, 26, 0.98);
+            --border-color: #333333;
+            --accent-color: #4f46e5;
+            --accent-hover: #4338ca;
+            --danger-color: #dc2626;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --card-bg: #242424;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+            min-height: 100vh;
+            color: var(--text-light);
+        }
+
+        /* Modern Navbar */
+        .navbar {
+            background: var(--card-bg) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .navbar-brand, .nav-link {
+            color: var(--text-light) !important;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-color) !important;
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            background: var(--card-bg);
+        }
+
+        /* Button Styling */
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            color: white !important;
+            padding: 0.8rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            color: white !important;
+        }
+
+        /* Alert Styling */
+        .alert {
+            background: var(--card-bg);
+            border-left: 4px solid var(--accent-color);
+            color: var(--text-light);
+        }
+
+        .alert-success {
+            border-left-color: var(--success-color);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger-color);
+        }
+
+        .alert-warning {
+            border-left-color: var(--warning-color);
+        }
+
+        /* Form Styling */
+        .form-control {
+            background: var(--primary-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 0.8rem;
+        }
+
+        .form-control:focus {
+            background: var(--primary-color);
+            color: var(--text-light);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* List Group Styling */
+        .list-group-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem !important;
+        }
+
+        /* Custom Additions */
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--text-light);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+
+        /* Search Bar Styling */
+        .search-form {
+            position: relative;
+            margin: 2rem 0;
+        }
+
+        .search-form .form-control {
+            padding-right: 3rem;
+            border-radius: 2rem;
+            background: var(--primary-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .search-form .btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            border-radius: 0 2rem 2rem 0;
+            padding: 0.8rem 1.5rem;
+        }
+
+        /* Additional Shadows */
+        .navbar, .card, .form-control, .btn {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* Social Share Buttons */
+        .share-buttons .btn {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .share-buttons .btn:hover {
+            transform: translateY(-3px);
+        }
+
+        .share-buttons .btn i {
+            font-size: 1.2rem;
+        }
+
+        /* Custom colors for social buttons */
+        .btn-facebook {
+            background-color: #1877f2;
+            border-color: #1877f2;
+        }
+
+        .btn-twitter {
+            background-color: #000000;
+            border-color: #000000;
+        }
+
+        .btn-linkedin {
+            background-color: #0a66c2;
+            border-color: #0a66c2;
+        }
+
+        .btn-whatsapp {
+            background-color: #25d366;
+            border-color: #25d366;
+        }
+
+        /* Add these to your existing styles */
+        .feature-icon {
+            color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .feature-icon {
+            transform: scale(1.1);
+        }
+
+        .display-4 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* Statistics cards specific styling */
+        .statistics-card {
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .statistics-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Add this to your existing styles */
+        .circle-progress {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            background: var(--primary-light);
+        }
+
+        .circle-progress-fill {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .progress-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .progress-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        @keyframes progress {
+            0% { stroke-dasharray: 0 100; }
+        }
+
+        .circle-progress svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotate(-90deg);
+        }
+
+        .circle-progress circle {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+        }
+
+        .circle-progress .bg {
+            stroke: var(--primary-light);
+        }
+
+        .circle-progress .progress {
+            stroke: var(--accent-color);
+            animation: progress 1s ease-out forwards;
+        }
+
+        /* Add these to your existing styles */
+        .card-title {
+            color: var(--text-light);
+            transition: color 0.3s ease;
+        }
+
+        .card-title:hover {
+            color: var(--accent-color);
+        }
+
+        .gap-3 {
+            gap: 1rem !important;
+        }
+
+        .gap-4 {
+            gap: 1.5rem !important;
+        }
+
+        /* Icon styling */
+        .text-muted i {
+            margin-right: 0.5rem;
+        }
+
+        /* Button group styling */
+        .btn-group .btn {
+            margin: 0 2px;
+        }
+
+        .btn-outline-primary {
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            background: transparent;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        /* Pagination updates */
+        .page-link {
+            color: var(--accent-color);
+            background-color: var(--bg-transparent);
+            border-color: var(--border-color);
+        }
+
+        .page-link:hover {
+            color: var(--accent-hover);
+            background-color: var(--primary-light);
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        /* Action buttons */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-outline-danger {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+            background: transparent;
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--primary-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        /* Navbar button color fix */
+        .navbar-toggler {
+            background-color: var(--accent-color);
+            border: none;
+        }
+
+        /* Close button fix */
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Form improvements */
+        .input-group-text {
+            background-color: var(--primary-light);
+            border-color: var(--border-color);
+            color: var(--text-light);
+        }
+
+        .form-label {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .form-text {
+            color: var(--text-muted) !important;
+        }
+
+        /* Form validation */
+        .is-invalid {
+            border-color: var(--danger-color) !important;
+        }
+
+        .invalid-feedback {
+            color: var(--danger-color);
+        }
+
+        /* Links in forms */
+        .card a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .card a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Input focus state */
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+        }
+
+        /* Input group focus state */
+        .input-group:focus-within .input-group-text {
+            border-color: var(--accent-color);
+        }
+
+        /* Button icon spacing */
+        .btn i {
+            margin-right: 0.5rem;
+        }
+
+        /* Card padding for forms */
+        .card-body.p-4 {
+            padding: 2rem !important;
+        }
+
+        /* Add these to your existing styles */
+        .asteriskField {
+            display: none;  /* Hide the required field asterisk */
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        /* Crispy form specific styling */
+        .invalid-feedback {
+            display: block;
+            color: var(--danger-color);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .is-invalid .form-control {
+            border-color: var(--danger-color);
+        }
+
+        .input-group > .form-control {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        /* Danger button */
+        .btn-danger {
+            background: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white !important;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-color);
+            opacity: 0.9;
+            color: white !important;
+        }
+
+        /* Success button */
+        .btn-success {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: white !important;
+        }
+
+        .btn-success:hover {
+            background: var(--success-color);
+            opacity: 0.9;
+            color: white !important;
+        }
+
+        /* Warning button */
+        .btn-warning {
+            background: var(--warning-color);
+            border-color: var(--warning-color);
+            color: white !important;
+        }
+
+        .btn-warning:hover {
+            background: var(--warning-color);
+            opacity: 0.9;
+            color: white !important;
+        }
+
+        /* Secondary button */
+        .btn-secondary {
+            background: var(--text-muted);
+            border-color: var(--text-muted);
+            color: white !important;
+        }
+
+        .btn-secondary:hover {
+            background: var(--text-muted);
+            opacity: 0.9;
+            color: white !important;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Modern Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-poll mr-2"></i> POLLING
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'polls:list' %}">Polls</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'polls:add' %}">Add Poll</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:logout' %}" onclick="return confirm('Are you sure you want to logout?')">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+    {% block content %}
+        {% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+</body>
+
+</html>
