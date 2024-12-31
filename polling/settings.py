@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'crispy_forms',
     'crispy_bootstrap5',
+    'corsheaders',
     
 ]
 
@@ -92,6 +93,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -288,3 +290,21 @@ LOGGING = {
 
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = [
+    "https://polling-rest-api.onrender.com",
+    "https://*.onrender.com",
+    "https://*.vercel.app",
+]
+
+# For development
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+
+# If you're using CORS headers, you might also want to add:
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+CORS_ALLOW_CREDENTIALS = True
