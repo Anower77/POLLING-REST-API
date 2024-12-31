@@ -14,6 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import logging.config
 import environ
+import dj_database_url
 env = environ.Env()
 load_dotenv()
 
@@ -125,16 +126,23 @@ WSGI_APPLICATION = 'polling.wsgi.app'
 # }
 
 
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': os.getenv('DATABASE_PORT'),
-    }
+    'default': dj_database_url.config(default=os.getenv('DATABASE_URL')),
+    # 'default': {
+    #     # database url
+        # 'ENGINE': 'django.db.backends.postgresql',
+        # 'NAME': os.getenv('DATABASE_NAME'),
+        # 'USER': os.getenv('DATABASE_USER'),
+        # 'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+        # 'HOST': os.getenv('DATABASE_HOST'),
+        # 'PORT': os.getenv('DATABASE_PORT'),
+    
 }
+
+
+
 
 
 
