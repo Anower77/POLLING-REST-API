@@ -1,16 +1,8 @@
 Certainly! Here is a basic structure for a `README.md` file for your "POLLING-REST-API" repository:
 
-```markdown
 # POLLING-REST-API
 
 A REST API for creating and managing polls. This project uses a mix of JavaScript, CSS, Python, and HTML.
-
-## Technologies Used
-
-- **JavaScript**: 35%
-- **CSS**: 34.5%
-- **Python**: 15.8%
-- **HTML**: 14.7%
 
 ## Features
 
